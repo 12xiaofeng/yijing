@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background: #2c1f1f;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            display: flex;
+            gap: 20px;
+            margin: 50px;
+        }
+
+        .card {
+            width: 200px;
+            height: 300px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            background: linear-gradient(45deg, #8B4513, #A0522D);
+            border: 3px solid #gold;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card-front {
+            background: url('https://img.zcool.cn/community/01d6d75f8d6c4da801215aa0b5e7f0.jpg') center/cover;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: #8B0000;
+        }
+
+        .name {
+            color: white;
+            font-size: 36px;
+            font-family: '楷体', cursive;
+            writing-mode: vertical-rl;
+            text-align: center;
+        }
+
+        .gua-container {
+            color: #FFEB3B;
+            text-align: center;
+        }
+
+        .gua-symbol {
+            font-size: 48px;
+            font-family: '隶书', cursive;
+        }
+
+        .gua-name {
+            font-size: 24px;
+            font-family: '隶书', cursive;
+        }
+
+        #score {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        #timer {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .firework {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: transparent;
+            animation: explode 1.5s ease-out;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(10); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="timer">剩余时间：200秒</div>
+    <div id="score">积分：0</div>
+
+    <script>
+        const names = ['吕行家', '吕鹿鸣', '李金妍', '李金珠'];
+        const guaList = [
+            { symbol: '☰', name: '乾' },
+            { symbol: '☷', name: '坤' },
+            { symbol: '☳', name: '震' },
+            { symbol: '☴', name: '巽' },
+            { symbol: '☵', name: '坎' },
+            { symbol: '☲', name: '离' },
+            { symbol: '☶', name: '艮' },
+            { symbol: '☱', name: '兑' }
+        ];
+
+        let score = 0;
+        let timeLeft = 200;
+        let activeCards = [];
+        let usedGua = [];
+        let gameActive = true;
+
+        // 初始化游戏
+        function initGame() {
+            const container = document.getElementById('game-container');
+            usedGua = shuffle([...guaList]).slice(0, 3);
+            
+            usedGua.forEach((gua, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">
+                            <div class="gua-container">
+                                <div class="gua-symbol">${gua.symbol}</div>
+                                <div class="gua-name">${gua.name}</div>
+                            </div>
+                        </div>
+                        <div class="card-back"></div>
+                    </div>
+                `;
+                card.addEventListener('click', () => handleClick(card, index));
+                container.appendChild(card);
+            });
+
+            startTimer();
+        }
+
+        // 处理点击事件
+        function handleClick(card, index) {
+            if (!gameActive || card.classList.contains('flipped')) return;
+
+            card.classList.add('flipped');
+            const back = card.querySelector('.card-back');
+            back.innerHTML = `<div class="name">${names[Math.floor(Math.random() * names.length)]}</div>`;
+            activeCards[index] = back.textContent.trim();
+
+            if (activeCards.filter(Boolean).length === 3) {
+                checkResult();
+                setTimeout(() => {
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
+                    activeCards = [];
+                }, 3000);
+            }
+        }
+
+        // 检查结果
+        function checkResult() {
+            const unique = [...new Set(activeCards)];
+            if (unique.length === 1) {
+                score += 30;
+                createFireworks();
+            } else if (unique.length === 2) {
+                score += 20;
+            }
+            
+            document.getElementById('score').textContent = `积分：${score}`;
+            
+            if (score >= 100 && score % 100 === 0) {
+                createFireworks();
+            }
+        }
+
+        // 创建烟花效果
+        function createFireworks() {
+            for (let i = 0; i < 50; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.style.left = `${Math.random() * 100}%`;
+                firework.style.top = `${Math.random() * 100}%`;
+                firework.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                document.body.appendChild(firework);
+                setTimeout(() => firework.remove(), 1500);
+            }
+        }
+
+        // 计时器
+        function startTimer() {
+            const timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = `剩余时间：${timeLeft}秒`;
+                
+                if (timeLeft <= 0) {
+                    gameActive = false;
+                    clearInterval(timer);
+                }
+            }, 1000);
+        }
+
+        // 洗牌算法
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
