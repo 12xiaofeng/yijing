@@ -193,7 +193,7 @@
             
             document.getElementById('score').textContent = `积分：${score}`;
             
-            if (score >= 100 && score % 100 === 0) {
+            if ([100, 200, 300, 400, 500].includes(score)) {
                 createFireworks();
             }
         }
