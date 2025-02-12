@@ -1,31 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>中国风翻牌游戏</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>八卦翻牌游戏</title>
     <style>
         body {
-            background: #2c1f1f;
+            margin: 0;
             display: flex;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+            overflow: hidden;
             font-family: '隶书', cursive;
-            color: #ffeb3b;
         }
 
-        #game-container {
-            position: relative;
-            margin-top: 50px;
-        }
-
-        .cards {
+        .cards-container {
             display: flex;
             gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .card {
-            width: 200px;
-            height: 300px;
+            width: 150px;
+            height: 250px;
             perspective: 1000px;
-            cursor: pointer;
         }
 
         .card-inner {
@@ -45,220 +46,140 @@
             width: 100%;
             height: 100%;
             backface-visibility: hidden;
-            border-radius: 10px;
-            padding: 20px;
-            box-sizing: border-box;
+            border-radius: 15px;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            background: linear-gradient(45deg, #8b5e3c, #6b4226);
-            border: 3px solid #ffeb3b;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card-front {
+            background: #2c3e50;
+            color: #FFD700;
         }
 
         .card-back {
-            transform: rotateY(180deg);
-            background: #4a2f1d;
-        }
-
-        .name {
-            writing-mode: vertical-rl;
-            font-size: 48px;
+            background: #e74c3c;
             color: white;
-            font-family: '楷书', cursive;
-            letter-spacing: 10px;
-        }
-
-        .gua-container {
-            text-align: center;
+            transform: rotateY(180deg);
+            font-family: '楷体', cursive;
+            font-size: 2em;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
         }
 
         .gua-symbol {
-            font-size: 64px;
+            font-size: 3em;
             margin-bottom: 10px;
         }
 
-        #timer {
-            position: fixed;
-            left: 20px;
-            bottom: 20px;
-            font-size: 32px;
+        /* 烟花效果 */
+        .firework {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: transparent;
+            animation: explode 5s ease-out;
         }
 
-        #score {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            font-size: 32px;
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(20); opacity: 0; }
         }
 
-        #fireworks {
-            position: fixed;
-            top: 0;
-            left: 0;
-            pointer-events: none;
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div class="cards">
-            <div class="card" onclick="flipCard(this)"><div class="card-inner"><div class="card-front"></div><div class="card-back"></div></div></div>
-            <div class="card" onclick="flipCard(this)"><div class="card-inner"><div class="card-front"></div><div class="card-back"></div></div></div>
-            <div class="card" onclick="flipCard(this)"><div class="card-inner"><div class="card-front"></div><div class="card-back"></div></div></div>
-        </div>
-    </div>
-    <div id="timer">200</div>
-    <div id="score">0</div>
-    <canvas id="fireworks"></canvas>
+    <div class="cards-container"></div>
 
     <script>
-        const names = ['吕行家', '吕鹿鸣', '李金妍', '李金珠'];
+        const names = ["张馨月","郜一睿","陈奕然","耿梦涵","舒丹乂","周怡辰","张哲铭","袁琳","郑雨蒙","范佳琳","刘宇彤","李森昊","张涵","侯弼元","郑载蓉","王延钰","于洪锦","师小梅","田欣洢","朱志豪","高明蕊","张诗宜","高涵蕾","许惠彭","张凯","贾心悦","王颢伊","何洁","牛竹君","宋莹煊","张益铭","高旭坤","赵玮馨","赵梓含","李宜珊","陈孜慧","马艺瑄","崔建鑫","崔竞文","张沐涵","燕飞宇","吴忆涵","蔡筱鸽","李佳轩","李秉轩","张梦溪","王思懿","孙千惠","吴利阳","张迅嘉","李祉萱","张子扬","齐凌云","刘宁晨","常心慈"];
+
         const guas = [
-            {symbol: '☰', name: '乾'}, {symbol: '☷', name: '坤'},
-            {symbol: '☳', name: '震'}, {symbol: '☴', name: '巽'},
-            {symbol: '☵', name: '坎'}, {symbol: '☶', name: '艮'},
-            {symbol: '☲', name: '离'}, {symbol: '☱', name: '兑'}
+            {symbol: "☰", name: "乾"}, {symbol: "☱", name: "兑"},
+            {symbol: "☲", name: "离"}, {symbol: "☳", name: "震"},
+            {symbol: "☴", name: "巽"}, {symbol: "☵", name: "坎"},
+            {symbol: "☶", name: "艮"}, {symbol: "☷", name: "坤"}
         ];
 
-        let score = 0;
-        let timeLeft = 200;
-        let activeCards = 0;
-        let gameActive = true;
-        let currentGuas = [];
+        function createFirework(x, y) {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.left = x + 'px';
+            firework.style.top = y + 'px';
+            firework.style.background = `radial-gradient(circle, 
+                hsl(${Math.random()*360}, 100%, 50%),
+                hsl(${Math.random()*360}, 100%, 50%),
+                transparent 70%)`;
+            document.body.appendChild(firework);
+            setTimeout(() => firework.remove(), 5000);
+        }
 
-        function initializeGame() {
-            document.querySelectorAll('.card-front').forEach(front => {
-                const gua = getRandomGua();
-                front.innerHTML = `
-                    <div class="gua-container">
+        function createCard() {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const gua = guas.splice(Math.floor(Math.random()*guas.length), 1)[0];
+            
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">
                         <div class="gua-symbol">${gua.symbol}</div>
                         <div>${gua.name}</div>
-                    </div>`;
+                    </div>
+                    <div class="card-back"></div>
+                </div>
+            `;
+
+            card.addEventListener('click', function() {
+                if (this.classList.contains('flipped')) return;
+                
+                this.classList.add('flipped');
+                const rect = this.getBoundingClientRect();
+                createFirework(rect.left + rect.width/2, rect.top + rect.height/2);
+                
+                const back = this.querySelector('.card-back');
+                back.textContent = names[Math.floor(Math.random()*names.length)];
+                
+                setTimeout(() => {
+                    this.classList.remove('flipped');
+                    guas.push(gua);
+                }, 15000);
             });
-            startTimer();
+
+            return card;
         }
 
-        function getRandomGua() {
-            if (currentGuas.length >= 3) currentGuas = [];
-            let gua;
-            do {
-                gua = guas[Math.floor(Math.random() * guas.length)];
-            } while (currentGuas.includes(gua.name));
-            currentGuas.push(gua.name);
-            return gua;
-        }
-
-        function flipCard(card) {
-            if (!gameActive || card.classList.contains('flipped')) return;
-
-            card.classList.add('flipped');
-            activeCards++;
-            
-            const back = card.querySelector('.card-back');
-            back.innerHTML = `<div class="name">${names[Math.floor(Math.random() * names.length)]}</div>`;
-
-            if (activeCards === 3) {
-                setTimeout(checkResult, 3000);
+        // 初始化游戏
+        function initGame() {
+            const container = document.querySelector('.cards-container');
+            while (guas.length > 0) {
+                container.appendChild(createCard());
+                container.appendChild(createCard());
+                return;
             }
         }
 
-        function checkResult() {
-            const results = [...document.querySelectorAll('.flipped .name')].map(n => n.innerText);
-            activeCards = 0;
-            
-            // 计分逻辑
-            const unique = new Set(results);
-            if (unique.size === 1) {
-                score += 60;
-                showFireworks();
-            } else if (unique.size === 2) {
-                score += 20;
-            }
+        // 每15秒重置八卦池
+        setInterval(() => {
+            guas.splice(0, guas.length, 
+                {symbol: "☰", name: "乾"}, {symbol: "☱", name: "兑"},
+                {symbol: "☲", name: "离"}, {symbol: "☳", name: "震"},
+                {symbol: "☴", name: "巽"}, {symbol: "☵", name: "坎"},
+                {symbol: "☶", name: "艮"}, {symbol: "☷", name: "坤"}
+            );
+            document.querySelector('.cards-container').innerHTML = '';
+            initGame();
+        }, 15000);
 
-            document.getElementById('score').innerText = score;
-            
-            // 检查分数触发条件
-            if (score % 100 === 0 && score > 0) {
-                showFireworks();
-            }
-
-            // 重置卡片
-            document.querySelectorAll('.card').forEach(c => {
-                c.classList.remove('flipped');
-                c.querySelector('.card-front').innerHTML = `
-                    <div class="gua-container">
-                        <div class="gua-symbol">${getRandomGua().symbol}</div>
-                        <div>${getRandomGua().name}</div>
-                    </div>`;
-            });
-            currentGuas = [];
-        }
-
-        function startTimer() {
-            const timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    gameActive = false;
-                    clearInterval(timer);
-                }
-            }, 1000);
-        }
-
-        // 烟花效果实现
-        function showFireworks() {
-            const canvas = document.getElementById('fireworks');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            class Particle {
-                constructor(x, y) {
-                    this.x = x;
-                    this.y = y;
-                    this.angle = Math.random() * Math.PI * 2;
-                    this.velocity = Math.random() * 5 + 2;
-                    this.friction = 0.95;
-                    this.gravity = 0.3;
-                    this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                    this.alpha = 1;
-                }
-
-                update() {
-                    this.velocity *= this.friction;
-                    this.x += Math.cos(this.angle) * this.velocity;
-                    this.y += Math.sin(this.angle) * this.velocity + this.gravity;
-                    this.alpha -= 0.015;
-                }
-
-                draw() {
-                    ctx.globalAlpha = this.alpha;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-                    ctx.fillStyle = this.color;
-                    ctx.fill();
-                }
-            }
-
-            const particles = Array.from({length: 200}, () => 
-                new Particle(canvas.width/2, canvas.height/2));
-
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                particles.forEach((particle, index) => {
-                    particle.update();
-                    particle.draw();
-                    if (particle.alpha <= 0) particles.splice(index, 1);
-                });
-                if (particles.length > 0) requestAnimationFrame(animate);
-            }
-
-            animate();
-            setTimeout(() => particles.length = 0, 5000);
-        }
-
-        initializeGame();
+        initGame();
     </script>
 </body>
 </html>
